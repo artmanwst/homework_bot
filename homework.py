@@ -107,7 +107,7 @@ def check_response(response):
 
 
 def main():
-    """Главная функция"""
+    """Главная функция."""
     check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
