@@ -39,7 +39,6 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверка токенов. Если их нет - программа останавливается."""
-
     if not all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         logger.critical('Токены не найдены')
         raise KeyError()
@@ -92,7 +91,6 @@ def parse_status(homework):
 
 def check_response(response):
     """Проверяем наш запрос на предмет различных ошибок."""
-
     if 'homeworks' not in response:
         message = 'В ответе API нет ключа "homeworks"'
         raise TypeError(message)
@@ -110,7 +108,6 @@ def check_response(response):
 
 def main():
     """Главная функция"""
-
     check_tokens()
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
