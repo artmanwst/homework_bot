@@ -1,12 +1,19 @@
-import os
-import requests
+import json
 import logging
-import telegram
+import os
 import time
 
+import http
+import requests
+import telegram
 
 from dotenv import load_dotenv
-from http import HTTPStatus
+from exceptions import (
+     SendMessageExept,
+     APIConnectError,
+     APIStatusError,
+     JSONConversionError)
+
 
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 RETRY_TIME = 600
@@ -41,7 +48,7 @@ def check_tokens():
     """Проверка токенов. Если их нет - программа останавливается."""
     if not all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
         logger.critical('Токены не найдены')
-        raise KeyError()
+        raise KeyError('Один из токенов не был найден')
     return (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
 
 
@@ -52,40 +59,47 @@ def send_message(bot, message):
         logger.debug('Сообщение отправлено')
     except Exception:
         logger.error('Ошибка не удалось отправить сообщение')
+        raise SendMessageExept('Не получается отправить сообщение')
 
 
 def get_api_answer(timestamp):
     """Получаем результат запроса к API."""
-    ENDPOINT = os.getenv('ENDPOINT')
     try:
+        current_date = time.strftime('%Y-%m-%d', time.localtime())
         homeworks = requests.get(url=ENDPOINT, headers=HEADERS,
-                                 params={'from_date': timestamp})
+                                 params={'from_date': timestamp,
+                                         'current_date': current_date})
         homework_status = homeworks.status_code
-    except Exception as error:
-        raise KeyError(f'Сбой "{error}" при запросе к эндпоинту.')
-    if homework_status != HTTPStatus.OK:
-        raise KeyError(f'Status_code сервера API {homework_status}, а не 200.')
+    except requests.RequestException:
+        raise APIConnectError(
+            "Ошибка при попытке соединения с эндпоинтом"
+        )
+    if homework_status != http.HTTPStatus.OK:
+        raise APIStatusError(
+            f"Код ответа сервера: {homework_status}"
+        )
     try:
-        response = homeworks.json()
-    except Exception as error:
-        raise KeyError(f'Сбой "{error}" при переводе в json.')
-    return response
+        return homeworks.json()
+    except json.JSONDecodeError as e:
+        raise JSONConversionError("Ошибка при преобразовании в JSON формат:",
+                                  str(e))
 
 
 def parse_status(homework):
     """Получаем статус последней домашней работы(если она есть)."""
-    if 'homework_name' in homework:
-        homework_name = homework['homework_name']
-    else:
+    if 'homework_name' not in homework:
         message = 'API вернул домашнее задание без ключа "homework_name"'
         raise KeyError(message)
+    homework_name = homework['homework_name']
+    if 'status' not in homework:
+        raise KeyError('Статус домашней работы отсутствует')
+
     homework_status = homework['status']
-    try:
-        verdict = HOMEWORK_VERDICTS[homework_status]
-    except Exception:
+    if homework_status not in HOMEWORK_VERDICTS:
         raise KeyError(
             f'Статуса {homework_status} нет в "HOMEWORK_STATUSES".'
         )
+    verdict = HOMEWORK_VERDICTS[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -123,7 +137,7 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(message)
-            bot.send_message(TELEGRAM_CHAT_ID, message)
+            send_message(TELEGRAM_CHAT_ID, message)
         finally:
             time.sleep(RETRY_TIME)
 
