@@ -9,10 +9,10 @@ import telegram
 
 from dotenv import load_dotenv
 from exceptions import (
-     SendMessageExept,
-     APIConnectError,
-     APIStatusError,
-     JSONConversionError)
+    SendMessageExept,
+    APIConnectError,
+    APIStatusError,
+    JSONConversionError)
 
 
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
