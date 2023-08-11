@@ -62,7 +62,6 @@ def send_message(bot, message):
 
 def get_api_answer(timestamp):
     """Получаем результат запроса к API."""
-
     timestamp = timestamp or int(time.time())
     try:
         current_date = time.strftime('%Y-%m-%d', time.localtime())
