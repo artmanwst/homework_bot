@@ -1,15 +1,14 @@
+import http
 import json
 import logging
 import os
 import time
 
-import http
 import requests
 import telegram
-
 from dotenv import load_dotenv
+
 from exceptions import (
-    SendMessageExept,
     APIConnectError,
     APIStatusError,
     JSONConversionError)
@@ -57,13 +56,14 @@ def send_message(bot, message):
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.debug('Сообщение отправлено')
-    except Exception:
-        logger.error('Ошибка не удалось отправить сообщение')
-        raise SendMessageExept('Не получается отправить сообщение')
+    except telegram.TelegramError as e:
+        logger.error('Ошибка при отправке сообщения: {}'.format(e))
 
 
 def get_api_answer(timestamp):
     """Получаем результат запроса к API."""
+
+    timestamp = timestamp or int(time.time())
     try:
         current_date = time.strftime('%Y-%m-%d', time.localtime())
         homeworks = requests.get(url=ENDPOINT, headers=HEADERS,
@@ -110,6 +110,11 @@ def check_response(response):
         raise TypeError(message)
 
     hw_list = response['homeworks']
+    if 'current_date' not in response:
+        raise KeyError(
+            'Ключ current_date отсутствует в ответе API.'
+            f'Ключи ответа: {response.keys()}'
+        )
 
     if not isinstance(hw_list, list):
         message = ('Тип значения "homeworks" в ответе API'
