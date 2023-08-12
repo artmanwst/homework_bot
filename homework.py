@@ -63,6 +63,7 @@ def send_message(bot, message):
 def get_api_answer(timestamp):
     """Получаем результат запроса к API."""
     timestamp = timestamp or int(time.time())
+
     try:
         current_date = time.strftime('%Y-%m-%d', time.localtime())
         homeworks = requests.get(url=ENDPOINT, headers=HEADERS,
@@ -131,8 +132,9 @@ def main():
     timestamp = int(time.time())
 
     while True:
+        response = get_api_answer(timestamp)
+        timestamp = response.get('current_date', timestamp)
         try:
-            response = get_api_answer(timestamp)
             homeworks = check_response(response)
             if homeworks:
                 message = parse_status(homeworks[0])
